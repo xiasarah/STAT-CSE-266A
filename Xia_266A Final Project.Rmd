@@ -1,0 +1,161 @@
+---
+title: "266A Final Project: Provisional COVID-19 Deaths by Sex and Age"
+author: "Sarah Xia"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## Introduction
+
+This data set is sourced from the National Center for Health Statistics (NCHS) and includes recorded deaths related to COVID-19, pneumonia, and influenza. These statistics are further broken down by age group, sex, and location. This data set is highly relevant to assessing how COVID-19 compares to other similar diseases and also whether certain demographics correlate with a higher number of deaths.
+
+
+#### Variables
+
+**Data.As.Of** - date to which the data was retrieved 
+
+**Start.Date** - date the data was first collected
+
+**End.Date** - last date the data was collected
+
+**Group** - Over what period of time was the row of data collected over
+
+**Year** - If the "Group" variable was "By Year" or "By Month", this column refers to which year the data was collected over
+
+**Month** - If "Group" variable was "By Month", this column refers to which month the data was collected over
+
+**State** - Which state the data or US territory the data was collected from
+
+**Sex** - whether the demographic of the individuals assessed identified as male or female
+
+**Age Group** - Which age group the individuals assessed belonged to
+
+**COVID.19.Deaths** - Deaths that were COVID-19 related
+
+**Total.Deaths** - Total deaths regardless of cause
+
+**Pneumonia.Deaths** - Deaths that were pneumonia related
+
+**Pneumonia.and.COVID.19.Deaths** - Deaths that were both pneumonia and COVID-19 related
+
+**Influenza.Deaths** - Deaths that were influenza related
+
+**Pneumonia..Influenza..or.COVID.19.Deaths** - Deaths that were related to either pneumonia, influenza, or COVID-19
+
+**Footnote** - additional notes about data in the row
+
+
+```{r}
+library(ggplot2)
+rawdata <- read.csv("Provisional_COVID-19_Deaths_by_Sex_and_Age.csv")
+```
+
+## Findings
+
+(1) When assessing the distribution across all months since January 2020, COVID-19 deaths appear to occur more frequently with increasing age groups.
+
+(2) When assessing the distribution across various age groups from 0-85+, there appears to be no clear correlation between number of COVID-19 related deaths and sex as supported also by a t-score of -2.2172 with significance of p-value = 0.02682.
+
+(3) Observing just the fifty US states, we can conclude that the older age groups have a consistently higher number of deaths regardless of state.
+
+(4) Observing just the fifty US states, Texas, California, Florida, Tennessee, and Arizona have the highest mean number of COVID-19 deaths total.
+
+(5) Looking the the side-by-side bar graphs of the percentage of deaths COVID-19, pneumonia, and influenza contributed to the total number of deaths since January 2020 in California, we find that the total contributing deaths of COVID-19 and pneumonia are comparable but both diseases largely outnumber influenza.
+
+
+
+
+
+#### (1) COVID-19 deaths appear to occur more frequently with increasing age groups
+
+When assessing the distribution across all months since January 2020, COVID-19 deaths appear to occur more frequently with increasing age groups. To come to this finding, data was visualized in a scatter plot with the x-axis representing the various age groups and the y-axis quantifying the number of COVID-19 related deaths. We find that as age increases, individual points land higher on the y-axis. This observation is interesting because it helps determine which age groups are most at risk for severe cases of COVID-19 that can be potentially fatal. Younger individuals are less impacted by the disease while age can appear to increase your risk for serious infection.
+
+
+```{r, fig.width=10, fig.height=4}
+US <- rawdata[rawdata$State == "United States",]
+US <- US[US$Sex != "All Sexes",]
+US <- US[US$Age.Group != "All Ages",]
+US <- US[US$Group == "By Month",]
+
+q <- ggplot(data = US)
+
+q + geom_point(aes(x = factor(Age.Group,level=c("Under 1 year","0-17 years","1-4 years","5-14 years", "15-24 years", "18-29 years", "25-34 years", "30-39 years", "35-44 years", "40-49 years", "45-54 years", "50-64 years", "55-64 years", "65-74 years", "75-84 years", "85 years and over")), y = COVID.19.Deaths, col = Sex)) + 
+labs(x = "Age Group", y = "COVID-19 Deaths") +
+ggtitle("COVID-19 Deaths in the US per Month vs Age Group") + theme(plot.title = element_text(size=20, hjust=0.5), axis.text.x = element_text(angle=90))
+
+medians <- setNames(aggregate(COVID.19.Deaths ~ Age.Group, data = US, median), c("Age Group", "Median # of COVID-19 Deaths"))
+orderedAge <- medians[order(-medians$Median),]
+orderedAge
+```
+
+#### (2) No clear correlation between number of COVID-19 related deaths and sex
+
+When assessing the distribution across various age groups from 0-85+, there appears to be no clear correlation between number of COVID-19 related deaths and sex as supported also by a t-score of -2.2172 with significance of p-value = 0.02682. A scatter plot was formed with the x-axis representing the various age groups and the y-axis quantifying the number of COVID-19 related deaths. Each point was further distinguished by sex based on color. A red point represented "female" while a blue point represented "male". Visually, the red and blue points were largely intertwined indicating there was no correlation relating to sex. This finding was further solidified through a two sample t-test. The result was a t-score of -2.2172 and p-value = 0.02682. The purpose of this statistical test is to assess the similarity of two population means and a p-value of <0.05 indicates significance. Therefore, we can conclude based on these numbers that sex does not increase your risk for serious COVID-19 infection. This result is interesting because it helps determine which demographics do not impact your risk.  
+
+```{r}
+Female_US <- US[US$Sex == "Female",]
+Female_US <- Female_US$COVID.19.Deaths
+
+Male_US <- US[US$Sex == "Male",]
+Male_US <- Male_US$COVID.19.Deaths
+
+t.test(x = Female_US, y = Male_US, alternative = "two.sided")
+```
+#### (3) Older age groups have a consistently higher number of deaths regardless of state
+
+Observing just the fifty US states, we can conclude that the older age groups have a consistently higher number of deaths regardless of state. Creating a scatter plot with states on the x-axis and number of COVID-19 related deaths on the y-axis, the age groups are distinguished by color as presented in a legend on the right. Across all states, we observe red, yellow, and greens sticking strictly to the bottom half of the graph while the blue and purple points peak at high numbers regardless of the state. This finding can suggest the elimination of location as a confounding factor and solidify the idea that older age increases risk regardless of state. 
+
+```{r, fig.width=8}
+fiftyStates <- rawdata[rawdata$State != "United States",]
+fiftyStates <- fiftyStates[fiftyStates$State != "Puerto Rico",]
+fiftyStates <- fiftyStates[fiftyStates$State != "New York City",]
+fiftyStates <- fiftyStates[fiftyStates$Sex == "All Sexes",]
+fiftyStates <- fiftyStates[fiftyStates$Age.Group != "All Ages",]
+fiftyStates <- fiftyStates[fiftyStates$State != "Puerto Rico",]
+fiftyStates <- fiftyStates[fiftyStates$State != "District of Columbia",]
+fiftyStates <- fiftyStates[fiftyStates$Group == "By Total",]
+
+p <- ggplot(data=fiftyStates)
+p + geom_point(aes(y = COVID.19.Deaths, x = State, col=(Age.Group))) + theme(axis.text.x = element_text(angle = 90)) + ggtitle("COVID-19 Deaths by State") + theme(plot.title = element_text(hjust=0.5))
+
+p +geom_boxplot(aes(y = fiftyStates$COVID.19.Deaths, x = fiftyStates$State)) + theme(axis.text.x = element_text(angle = 90)) + ggtitle("COVID-19 Deaths by State") + theme(plot.title = element_text(hjust=0.5)) + labs(x = "State", y = "COVID-19 Deaths")
+```
+
+
+#### (4) Texas, California, Florida, Tennessee, and Arizona have the highest mean number of COVID-19 deaths total
+
+Evaluating a box plot of COVID-19 deaths across the fifty states, we can see that Texas, California, Florida, Tennessee, and Arizona have the highest median deaths. This is further confirmed when analyzing a sorted data frame of median COVID-19 deaths by state. This result is interesting because although California, Texas, and Florida have the highest population, Tennessee and Arizona are not ranked among the top five most populated states. Additionally, from outside resources (<https://worldpopulationreview.com/states>) we know that the population of California has roughly ten million people more than Texas which is a nearly 33% increase and yet, the most COVID-19 deaths are reported from Texas. The impact of this finding suggests that there is some factor outside of state population size that is contributing to the number of observed deaths. Whether that be state regulated precautions or health care, there is another variable outside this data set that should be further analyzed.
+
+```{r}
+medianState <- setNames(aggregate(COVID.19.Deaths ~ State, data = fiftyStates, median), c("State", "Median # of Total COVID-19 Deaths"))
+orderedStates <- medianState[order(-medianState$Median),]
+orderedStates
+```
+#### (5) The total contributing deaths in California of COVID-19 and pneumonia are comparable but both diseases largely outnumber influenza
+
+Since the raw data set included numbers of deaths each disease contributed as well as the total number of deaths, three additional columns were extrapolated that displayed the percentage of deaths a particular disease contributed to the total in just California. Three side-by-side bar plots visualize the percentage of disease related deaths over varying age groups. Across all age groups, COVID-19 and pneumonia have higher contributions to the total number of deaths compared to influenza. The highest percent of influenza related deaths peaks at 0.66% in 5-14 year olds which other than COVID-19 deaths in ages under one, is a lower percentage than any other age group in COVID-19 or pneumonia. It is also worth noting that influenza deaths peak in adolescence whereas the other two diseases have higher death percentages with older age. This finding is impactful because it dispels false comparisons of COVID-19 to the flu. Especially early in the COVID-19 pandemic, several statements were made to downplay severity of the illness and undermine precautions government official set in place. These graphs provide a visualization of how many more people die from COVID-19 versus the flu.
+
+
+```{r}
+percentage <- transform(fiftyStates, percent.Of.COVID.Deaths = (fiftyStates$COVID.19.Deaths/fiftyStates$Total.Deaths*100), percent.Of.Influenza.Deaths = (fiftyStates$Influenza.Deaths/fiftyStates$Total.Deaths*100), percent.Of.Pneumonia.Deaths = (fiftyStates$Pneumonia.Deaths/fiftyStates$Total.Deaths*100))
+CA <- percentage[percentage$State == "California",]
+CA <- CA[CA$Group == "By Total",]
+
+par(mfrow = c(1,3))
+
+barplot(CA$percent.Of.COVID.Deaths, names.arg = c("Under 1 year","0-17 years","1-4 years","5-14 years", "15-24 years", "18-29 years", "25-34 years", "30-39 years", "35-44 years", "40-49 years", "45-54 years", "50-64 years", "55-64 years", "65-74 years", "75-84 years", "85 years and over"), cex.names = 0.5, las=2, col="darkseagreen4", ylab="% of Total Deaths", main = "COVID-19" )
+
+barplot(CA$percent.Of.Pneumonia.Deaths, names.arg = c("Under 1 year","0-17 years","1-4 years","5-14 years", "15-24 years", "18-29 years", "25-34 years", "30-39 years", "35-44 years", "40-49 years", "45-54 years", "50-64 years", "55-64 years", "65-74 years", "75-84 years", "85 years and over"), cex.names = 0.5, las=2, ylim = c(0,14),col="darkred", ylab="% of Total Deaths", main = "Pneumonia" )
+
+barplot(CA$percent.Of.Influenza.Deaths, names.arg = c("Under 1 year","0-17 years","1-4 years","5-14 years", "15-24 years", "18-29 years", "25-34 years", "30-39 years", "35-44 years", "40-49 years", "45-54 years", "50-64 years", "55-64 years", "65-74 years", "75-84 years", "85 years and over"), cex.names = 0.5, las=2, ylim = c(0,14),col="darkorchid4", ylab="% of Total Deaths", main = "Influenza" )
+
+```
+
+## Conclusion
+
+In conclusion, we can determine that COVID-19 deaths increase with age regardless of state in the US where statistics were reported from. It is also found that deaths relating to COVID-19 are independent of sex. Among all fifty states in the United States, the ordered list of states by COVID-19 death median does not correlate with the list of states ordered by population size as confirmed by an outside source. In analyzing the percentage of deaths contributed by disease, we also discover the number of COVID-19 deaths is much higher than influenza and more comparable to that of pneumonia. These conclusions suggest that further research should be done to determine what health markers change with age that make older individuals more susceptible to severe cases of COVID-19. More data can be analyzed regarding what percentage of those infected with COVID-19, pneumonia, and influenza die from the disease. This would draw a better conclusion about how severe and fatal each disease actually is whereas this data set gave an overview of which demographics were more at risk. Based on the median COVID-19 deaths by state, it would also be beneficial to look into how instated government precautions or health care can contribute to the number of deaths for each disease. 
+
+
+
